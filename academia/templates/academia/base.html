@@ -1,0 +1,77 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#172554">
+    <link rel="icon" type="image/png" href="{% static 'academia/img/logo-alfabetizamx.png' %}">
+    <title>{% block title %}AlfabetizaMX{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'academia/css/app.css' %}?v=20261124-diseno-horizontal">
+    {% block extra_head %}{% endblock %}
+</head>
+<body data-home-url="{% if request.user.is_authenticated %}{% url 'home' %}{% else %}{% url 'login' %}{% endif %}">
+    <a class="skip-link" href="#contenido-principal">Saltar al contenido</a>
+    <div class="app-shell">
+        <header class="topbar">
+            <a class="brand" href="{% if request.user.is_authenticated %}{% url 'home' %}{% else %}{% url 'login' %}{% endif %}" aria-label="AlfabetizaMX, ir al inicio">
+                <img class="brand-logo" src="{% static 'academia/img/logo-alfabetizamx.png' %}" alt="" width="46" height="46">
+                <span><strong>AlfabetizaMX</strong><small>Aprender a leer y escribir</small></span>
+            </a>
+            {% if request.user.is_authenticated %}
+            <nav class="topnav" aria-label="Navegación principal">
+                <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}" data-voice-label="inicio">Inicio</a>
+                <a href="{% url 'mi_progreso' %}" data-voice-label="mi progreso">Mi progreso</a>
+                {% if es_admin or es_tutor %}<a href="{% url 'lista_alumnos' %}" data-voice-label="alumnos">Alumnos</a>{% endif %}
+                {% if es_admin or request.user.is_superuser %}
+                    <a href="{% url 'gestion_usuarios' %}" data-voice-label="usuarios">Usuarios</a>
+                {% endif %}
+            </nav>
+            <div class="account-area">
+                <div class="user-chip">
+                    <span class="avatar" aria-hidden="true">{{ request.user.first_name|default:request.user.username|slice:':1'|upper }}</span>
+                    <span class="user-chip-text"><strong>{{ request.user.first_name|default:request.user.username }}</strong><small>{% if perfil %}{{ perfil.get_rol_display }}{% elif request.user.is_superuser %}Administrador{% else %}Usuario{% endif %}</small></span>
+                </div>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="button button-ghost button-small" type="submit" aria-label="Cerrar sesión">Salir</button>
+                </form>
+            </div>
+            {% else %}
+            <nav class="topnav"><a href="{% url 'login' %}">Iniciar sesión</a><a class="nav-cta" href="{% url 'registro' %}">Crear cuenta</a></nav>
+            {% endif %}
+        </header>
+
+        <section class="accessibility-tools" aria-label="Ayudas de accesibilidad">
+            <div class="accessibility-actions">
+                <button class="access-tool access-tool-primary" type="button" data-a11y-action="read-page" aria-label="Escuchar el contenido de esta pantalla">
+                    <img class="audio-icon" src="{% static 'academia/img/icono-escuchar.png' %}" alt="">
+                </button>
+                <button class="access-tool" type="button" data-a11y-action="stop-voice" aria-label="Detener la voz">
+                    <span aria-hidden="true">⏹</span><span>Detener voz</span>
+                </button>
+                <button class="access-tool access-tool-compact" type="button" data-a11y-action="smaller-text" aria-label="Disminuir tamaño de pantalla">A−</button>
+                <button class="access-tool access-tool-compact" type="button" data-a11y-action="larger-text" aria-label="Aumentar tamaño de pantalla">A+</button>
+                <button class="access-tool" type="button" data-a11y-action="contrast" aria-pressed="false" aria-label="Activar o desactivar alto contraste">
+                    <span aria-hidden="true">◐</span><span>Contraste</span>
+                </button>
+            </div>
+            <p class="accessibility-status" id="accessibilityStatus" role="status" aria-live="polite">Puedes escuchar esta pantalla o detener el audio cuando lo necesites.</p>
+        </section>
+
+        <main class="page-content" id="contenido-principal" tabindex="-1">
+            {% if messages %}
+                <div class="messages" aria-live="polite">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags|default:'info' }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+        <footer class="footer"><span>AlfabetizaMX</span><span>Aprender paso a paso, a cualquier edad.</span></footer>
+    </div>
+    <script src="{% static 'academia/js/accesibilidad.js' %}?v=20261124-limpio" defer></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

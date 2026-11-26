@@ -1,10 +1,9 @@
 from django.urls import path
-from . import views
+from .views import GuardarIntentoView, ProgresoView, RealizarActividadView
 
 urlpatterns = [
-    path(
-        'actividad/<int:actividad_id>/',
-        views.realizar_actividad,
-        name='realizar_actividad',
-    ),
+    path('progreso/', ProgresoView.as_view(), name='mi_progreso'),
+    path('progreso/alumno/<int:usuario_id>/', ProgresoView.as_view(), name='progreso_usuario'),
+    path('<int:actividad_id>/guardar/', GuardarIntentoView.as_view(), name='guardar_intento'),
+    path('<int:actividad_id>/', RealizarActividadView.as_view(), name='realizar_actividad'),
 ]

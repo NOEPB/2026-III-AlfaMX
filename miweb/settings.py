@@ -10,22 +10,52 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+# Vercel executes Django as serverless functions. A deployed app must never
+# silently fall back to development credentials or an ephemeral SQLite file.
+IS_DEPLOYED = bool(os.environ.get('VERCEL')) or os.environ.get('DJANGO_ENV') == 'production'
+DEBUG = not IS_DEPLOYED and os.environ.get('DJANGO_DEBUG', '1') == '1'
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-lec-ds7)r!6##6=z3h^+sc+0jmb9%3pw+iml03%1nwbb*fc-ct'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if IS_DEPLOYED:
+        raise ImproperlyConfigured('Set DJANGO_SECRET_KEY in the deployment environment.')
+    SECRET_KEY = 'django-insecure-local-only-change-this-before-deployment'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS += [
+    host.strip() for host in os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(',')
+    if host.strip()
+]
+vercel_url = os.environ.get('VERCEL_URL', '').strip()
+if vercel_url:
+    ALLOWED_HOSTS.append(vercel_url)
+ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS))
 
-ALLOWED_HOSTS = ['127.0.0.1','localhost']
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip().rstrip('/')
+    for origin in os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
+]
+if vercel_url:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{vercel_url}')
+
+if IS_DEPLOYED:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 3600
+    SECURE_CONTENT_TYPE_NOSNIFF = True
 
 
 # Application definition
@@ -38,7 +68,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'alfabetizacion',
-    'academia',
+    'academia.apps.AcademiaConfig',
     'alumno',
     'contabilidad',
     'evaluarme',
@@ -66,6 +96,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'academia.context_processors.roles_y_perfil',
             ],
         },
     },
@@ -77,12 +108,27 @@ WSGI_APPLICATION = 'miweb.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    DATABASES = {
+        'default': dj_database_url.parse(
+            database_url,
+            conn_max_age=0,  # Serverless: do not retain idle database connections.
+            ssl_require=True,
+        )
     }
-}
+    if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+        # Supabase's transaction pooler does not support prepared statements.
+        DATABASES['default'].setdefault('OPTIONS', {})['prepare_threshold'] = None
+elif IS_DEPLOYED:
+    raise ImproperlyConfigured('Set DATABASE_URL to a persistent PostgreSQL database.')
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -119,14 +165,34 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+if IS_DEPLOYED:
+    # This version does not send transactional mail. SMTP is configurable if
+    # password reset or notifications are added; never log messages in prod.
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+            'OPTIONS': {
+                'host': os.environ.get('DJANGO_SMTP_HOST', 'localhost'),
+                'port': int(os.environ.get('DJANGO_SMTP_PORT', '25')),
+                'username': os.environ.get('DJANGO_SMTP_USER', ''),
+                'password': os.environ.get('DJANGO_SMTP_PASSWORD', ''),
+                'use_tls': os.environ.get('DJANGO_SMTP_USE_TLS', '0') == '1',
+                'timeout': 10,
+            },
+        },
+    }
+else:
+    MAILERS = {
+        'default': {'BACKEND': 'django.core.mail.backends.console.EmailBackend'},
+    }
+
+LOGIN_URL = '/academia/login/'
+LOGIN_REDIRECT_URL = '/academia/'
+LOGOUT_REDIRECT_URL = '/academia/login/'

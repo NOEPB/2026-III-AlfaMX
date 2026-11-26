@@ -1,0 +1,5 @@
+{% extends 'academia/base.html' %}
+{% block title %}Confirmar eliminación | AlfabetizaMX{% endblock %}
+{% block content %}
+<section class="confirm-card"><div class="confirm-icon">!</div><span class="eyebrow">CONFIRMACIÓN</span><h1>¿Eliminar este registro?</h1><p class="confirm-object">{{ object }}</p><p>Esta acción no se puede deshacer.</p>{% if aviso_dependencias %}<div class="warning-note">{{ aviso_dependencias }}</div>{% endif %}<form method="post">{% csrf_token %}<div class="form-actions centered"><a class="button button-ghost" href="{{ volver_url|default:'/' }}">Cancelar</a><button class="button button-danger" type="submit">Sí, eliminar</button></div></form></section>
+{% endblock %}
