@@ -1,118 +1,491 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Actividad: {{ actividad.tipo }} - Alfabetiza MX</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; text-align: center; }
-        .card { background: white; max-width: 600px; margin: 20px auto; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1 { color: #1a237e; }
-        .canvas-container { position: relative; width: 100%; max-width: 450px; height: 260px; margin: 20px auto; border: 2px dashed #90caf9; background-color: #e3f2fd; border-radius: 12px; overflow: hidden; touch-action: none; }
-        .letter-guide { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 130px; font-weight: bold; color: rgba(21, 101, 192, 0.15); user-select: none; z-index: 1; }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; cursor: crosshair; }
-        .btn-group { display: flex; justify-content: center; gap: 12px; margin-top: 20px; }
-        .btn-success { background-color: #2e7d32; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .btn-success:hover { background-color: #1b5e20; }
-        .btn-secondary { background-color: #78909c; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .btn-secondary:hover { background-color: #546e7a; }
-        .nav-links { margin-top: 25px; display: flex; justify-content: center; gap: 20px; }
-        .nav-links a { color: #3f51b5; font-weight: bold; text-decoration: none; }
-        .nav-links a:hover { text-decoration: underline; }
-    </style>
-</head>
-<body>
-
-    <div class="card">
-        <h1>Actividad: {{ actividad.tipo }}</h1>
-        <p><strong>Instrucción:</strong> {{ actividad.instruccion_audio }}</p>
-
-        <!-- Contenedor del Lienzo con la Letra Guía de Fondo -->
-        <div class="canvas-container">
-            <div class="letter-guide">{{ actividad.contenido.letra|default:"A" }}</div>
-            <canvas id="drawingCanvas"></canvas>
-        </div>
-
-        <div class="btn-group">
-            <button class="btn-secondary" onclick="clearCanvas()">🔄 Borrar Trazo</button>
-            <button class="btn-success" onclick="confirmStroke()">✓ Confirmar Trazo</button>
-        </div>
-
-        <div class="nav-links">
-            <a href="{% url 'detalle_modulo' actividad.leccion.modulo.pk %}">← Volver al módulo</a>
-            <a href="{% url 'home' %}">🏠 Volver al inicio</a>
-        </div>
+{% extends 'academia/base.html' %}
+{% load static %}
+{% block title %}Practicar | AlfabetizaMX{% endblock %}
+{% block extra_head %}<style> .practice-card{max-width:900px;margin:12px auto;padding:clamp(18px,4vw,40px);background:var(--surface,#fff);border:1px solid var(--border,#e5eaf2);border-radius:26px;box-shadow:0 12px 35px rgba(23,37,84,.07);text-align:center}.practice-card h1{font-size:clamp(27px,4vw,38px);margin:8px 0}.practice-card>p{color:var(--muted,#475569);font-size:17px;line-height:1.7}.practice-target{max-width:720px;margin:22px auto 10px;padding:18px;border-radius:20px;background:#f5f4ff;border:2px solid #d9d6ff}.practice-target-label{display:block;color:#4338a8;font-size:14px;font-weight:900;margin-bottom:6px}.practice-target-letter{display:block;font:900 clamp(72px,17vw,150px)/1.05 system-ui,sans-serif;color:#514bc5;letter-spacing:1px;white-space:nowrap;overflow-wrap:anywhere}.practice-picture{font-size:clamp(42px,8vw,68px);line-height:1.2;margin:4px 0 8px}.practice-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px auto;max-width:680px}.practice-step{padding:13px 8px;border:1px solid var(--border,#e3e8f0);border-radius:15px;background:var(--surface-soft,#fbfcff)}.practice-step span{display:block;font-size:30px;margin-bottom:4px}.practice-step strong{display:block;font-size:14px}.practice-step small{color:var(--muted,#64748b);font-size:12px}.canvas-container{position:relative;width:100%;max-width:680px;height:320px;margin:22px auto;border:3px dashed #8982ea;background:#fbfaff;border-radius:19px;overflow:hidden;touch-action:none}.letter-guide{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;user-select:none;overflow:hidden;z-index:0}.letter-guide span{display:inline-block;color:rgba(81,75,197,.10);font:900 150px/1 system-ui,sans-serif;letter-spacing:-.025em;white-space:nowrap}.stroke-guide{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}.stroke-guide .guide-line{fill:none;stroke:#16a34a;stroke-width:5.5;stroke-linecap:round;stroke-linejoin:round;opacity:.82;stroke-dasharray:1;stroke-dashoffset:0;vector-effect:non-scaling-stroke}.stroke-guide.is-animating .guide-line{stroke-dashoffset:1;animation:guide-draw 1.05s cubic-bezier(.35,.05,.2,1) forwards}.guide-arrow{fill:#16a34a}.guide-start{fill:#16a34a;stroke:#fff;stroke-width:3;vector-effect:non-scaling-stroke}.guide-start-number{fill:#fff;font:800 15px system-ui,sans-serif;text-anchor:middle;dominant-baseline:central;pointer-events:none}.guide-start-pulse{transform-box:fill-box;transform-origin:center;animation:guide-pulse 1.8s ease-out infinite}.canvas-container canvas{position:absolute;left:0;top:0;right:auto;bottom:auto;width:100%;height:100%;display:block;box-sizing:border-box;cursor:crosshair;touch-action:none;z-index:2}.guide-panel{max-width:680px;margin:14px auto 8px;padding:15px 17px;background:#effaf2;border:1px solid #b9e7c4;border-radius:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;text-align:left}.guide-cues{display:flex;gap:12px;flex-wrap:wrap}.guide-cue{display:flex;align-items:center;gap:7px;color:#14532d;font-weight:800;font-size:14px}.guide-dot{width:19px;height:19px;border-radius:50%;background:#16a34a;display:inline-grid;place-items:center;color:white;font-size:11px;font-weight:900;flex:none}.guide-line-key{width:25px;height:5px;border-radius:9px;background:#16a34a;display:inline-block;flex:none}.guide-panel .button{min-height:48px;font-size:14px;padding:11px 15px}.guide-unavailable{max-width:680px;margin:12px auto;padding:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;color:#9a3412;font-size:14px}.practice-actions,.practice-nav{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px}.practice-actions .button{min-height:58px;min-width:175px;font-size:16px}.practice-nav{margin-top:27px}.practice-nav a{color:#4338a8;font-size:15px;font-weight:800;padding:12px}.practice-feedback{min-height:64px;display:grid;place-items:center;margin-top:17px;padding:12px;color:#126b4f;font-weight:900;font-size:19px;line-height:1.5}.practice-feedback.is-error{color:#9f2d3d}.practice-feedback small{display:block;font-size:14px;font-weight:700}.listen-main{min-height:58px;padding:15px 24px;font-size:17px}.practice-hint{max-width:620px;margin:10px auto;color:var(--muted,#52617d);font-size:14px;line-height:1.6}.practice-score-note{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:13px;font-weight:800}.practice-card button:focus-visible,.practice-card a:focus-visible{outline:4px solid #f59e0b;outline-offset:3px}@keyframes guide-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}@keyframes guide-pulse{0%{transform:scale(.9);opacity:.85}70%{transform:scale(1.75);opacity:0}100%{transform:scale(1.75);opacity:0}}@media(prefers-reduced-motion:reduce){.stroke-guide.is-animating .guide-line{animation:none;stroke-dashoffset:0}.guide-start-pulse{animation:none}}@media(max-width:600px){.practice-card{padding:18px 13px}.canvas-container{height:260px}.practice-steps{gap:6px}.practice-step{padding:10px 4px}.practice-step small{font-size:11px}.practice-target{padding:12px 6px}.guide-panel{justify-content:center;text-align:center}.guide-cues{justify-content:center}.guide-cue{font-size:12px}}</style>{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="{% url 'home' %}" data-voice-label="inicio">Inicio</a><span aria-hidden="true">/</span><a href="{% url 'detalle_modulo' actividad.leccion.modulo.pk %}" data-voice-label="volver al módulo">{{ actividad.leccion.modulo.nombre }}</a><span aria-hidden="true">/</span><span>Actividad</span></div>
+<section class="practice-card" data-read-section>
+    <span class="eyebrow">{{ actividad.leccion.titulo }}</span>
+    <h1>Vamos a practicar</h1>
+    <p>Primero escucha. Después observa y sigue la forma con tu dedo, lápiz o ratón.</p>
+    <button class="button button-primary listen-main button-icon-audio" type="button" id="readInstruction" data-speak="{{ actividad.instruccion_audio }}" aria-label="Escuchar la instrucción del ejercicio" title="Escuchar instrucción"><img class="audio-icon" src="{% static 'academia/img/icono-escuchar.png' %}" alt=""></button>
+    <div class="practice-steps" aria-label="Pasos para realizar el ejercicio">
+        <div class="practice-step"><span aria-hidden="true"><img class="audio-icon" src="{% static 'academia/img/icono-escuchar.png' %}" alt=""></span><strong>Escucha</strong><small>Oye la indicación</small></div>
+        <div class="practice-step"><span aria-hidden="true">👀</span><strong>Observa</strong><small>Mira el ejemplo</small></div>
+        <div class="practice-step"><span aria-hidden="true">👆</span><strong>Practica</strong><small>Sigue la forma</small></div>
     </div>
+    <div class="practice-target" aria-label="Modelo que debes escribir">
+        <span class="practice-target-label">OBSERVA EL MODELO</span>
+        <div class="practice-picture" aria-hidden="true">{{ imagen_emoji }}</div>
+        <span class="practice-target-letter" id="targetText">{{ objetivo_trazo }}</span>
+        <button class="button button-audio button-icon-audio" type="button" data-speak="{{ objetivo_trazo }}. {{ descripcion_visual }}" aria-label="Escuchar modelo" title="Escuchar modelo"><img class="audio-icon" src="{% static 'academia/img/icono-escuchar.png' %}" alt=""></button>
+    </div>
+    {% if guia_disponible %}
+    <div class="guide-panel" aria-label="Guía visual para escribir">
+        <div class="guide-cues">
+            <div class="guide-cue"><span class="guide-dot">1</span><span>Empieza en el punto verde</span></div>
+            <div class="guide-cue"><span class="guide-line-key"></span><span>Sigue la línea hasta la flecha</span></div>
+        </div>
+        <button class="button button-secondary" type="button" id="replayGuide" aria-label="Ver otra vez cómo se escribe">▶ Ver el recorrido</button>
+    </div>
+    <p class="practice-hint" data-speak="Empieza en el punto verde. Sigue la línea verde hasta la flecha. Si hay varios recorridos, sigue los números en orden.">Empieza en el punto verde. Sigue la línea verde hasta la flecha. Si hay varios recorridos, sigue los números en orden.</p>
+    {% else %}
+    <div class="guide-unavailable" role="note">Esta actividad todavía no tiene una guía de recorrido. Puedes escuchar la instrucción, observar el modelo y practicar libremente.</div>
+    <p class="practice-hint">Observa el modelo de arriba y copia su forma dentro del recuadro.</p>
+    {% endif %}
+    <div class="practice-score-note">⭐ La evaluación es orientativa y te ayuda a practicar, no sustituye a tu docente.</div>
+    <div class="canvas-container" id="canvasContainer">
+        <div class="letter-guide" aria-hidden="true"><span id="letterGuide">{{ objetivo_trazo }}</span></div>
+        <svg class="stroke-guide" id="strokeGuide" aria-hidden="true" focusable="false" viewBox="0 0 680 320" preserveAspectRatio="none"></svg>
+        <canvas id="drawingCanvas" role="img" aria-label="Área para escribir. Empieza en el punto verde, sigue la línea y termina en la flecha. Dibuja con el dedo, lápiz o ratón."></canvas>
+    </div>
+    {{ guia_trazo|json_script:"strokeGuideData" }}
+    <div class="practice-actions">
+        <button class="button button-secondary" type="button" id="clearCanvas" aria-label="Borrar el dibujo">↻ Borrar dibujo</button>
+        <button class="button button-primary" type="button" id="confirmStroke" aria-label="Guardar y evaluar mi dibujo">✓ Terminé</button>
+    </div>
+    <div class="practice-feedback" id="feedback" role="status" aria-live="polite"></div>
+    {% if intentos_previos %}<p class="practice-hint">Ya has practicado esta actividad {{ intentos_previos }} vez{% if intentos_previos != 1 %}ces{% endif %}. Cada intento queda guardado en tu progreso.</p>{% endif %}
+    <form id="csrfForm" hidden>{% csrf_token %}</form>
+    <div class="practice-nav"><a href="{% url 'detalle_modulo' actividad.leccion.modulo.pk %}" data-voice-label="volver al módulo">← Volver al módulo</a><a href="{% url 'mi_progreso' %}" data-voice-label="mi progreso">📈 Ver mi progreso</a><a href="{% url 'home' %}" data-voice-label="inicio">⌂ Ir al inicio</a></div>
+</section>
+{% endblock %}
+{% block extra_js %}<script>
+(() => {
+ 'use strict';
+ const canvas = document.getElementById('drawingCanvas');
+ const ctx = canvas.getContext('2d', { alpha: true });
+ const container = document.getElementById('canvasContainer');
+ const feedback = document.getElementById('feedback');
+ const guide = document.getElementById('letterGuide');
+ const target = "{{ objetivo_trazo|escapejs }}";
+ const csrfToken = document.querySelector('#csrfForm [name=csrfmiddlewaretoken]').value;
+ const saveUrl = "{% url 'guardar_intento' actividad.pk %}";
+ const confirmButton = document.getElementById('confirmStroke');
+ const clearButton = document.getElementById('clearCanvas');
+ const replayGuideButton = document.getElementById('replayGuide');
+ const strokeGuide = document.getElementById('strokeGuide');
+ const guideDataNode = document.getElementById('strokeGuideData');
+ const guidePaths = guideDataNode ? JSON.parse(guideDataNode.textContent || '[]') : [];
+ const svgNS = 'http://www.w3.org/2000/svg';
 
-    <script>
-        const canvas = document.getElementById('drawingCanvas');
-        const ctx = canvas.getContext('2d');
+ let drawing = false;
+ let hasDrawn = false;
+ let points = [];
+ let strokeNumber = 0;
+ let startedAt = performance.now();
+ let audioUses = 0;
+ let saving = false;
+ let savedThisDrawing = false;
+ let lastPoint = null;
+ let cssWidth = 1;
+ let cssHeight = 1;
+ let resizePending = false;
 
-        // Configurar dimensiones reales del canvas según su contenedor
-        function resizeCanvas() {
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            ctx.lineWidth = 8;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = '#0d47a1';
-        }
+ const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
-        window.addEventListener('load', resizeCanvas);
-        window.addEventListener('resize', resizeCanvas);
+ function fitGuide() {
+   const box = container.getBoundingClientRect();
+   const chars = Math.max(1, String(target).length);
+   const fontSize = Math.max(34, Math.min(150, box.height * .70, box.width / (chars * .72)));
+   guide.style.fontSize = `${fontSize}px`;
+   document.getElementById('targetText').style.fontSize = `${Math.max(44, Math.min(150, box.height * .58, box.width / (chars * .78)))}px`;
+ }
 
-        let isDrawing = false;
+ function createSvgElement(name, attributes = {}) {
+   const node = document.createElementNS(svgNS, name);
+   for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, String(value));
+   return node;
+ }
 
-        function getMousePos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
-            const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
-            return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
-            };
-        }
+ // Dibuja la guía en el mismo sistema normalizado que usa el guardado del trazo.
+ // El punto de inicio y la flecha se recalculan con el tamaño CSS actual.
+ function renderStrokeGuide(animate = false) {
+   if (!strokeGuide) return;
+   strokeGuide.replaceChildren();
+   strokeGuide.setAttribute('viewBox', `0 0 ${Math.max(1, cssWidth)} ${Math.max(1, cssHeight)}`);
+   if (!Array.isArray(guidePaths) || !guidePaths.length) return;
 
-        function startDrawing(e) {
-            isDrawing = true;
-            const pos = getMousePos(e);
-            ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y);
-            e.preventDefault();
-        }
+   const defs = createSvgElement('defs');
+   const marker = createSvgElement('marker', {
+     id: 'guideArrowHead', markerWidth: 10, markerHeight: 10,
+     refX: 8, refY: 5, orient: 'auto', markerUnits: 'userSpaceOnUse',
+     viewBox: '0 0 10 10'
+   });
+   marker.appendChild(createSvgElement('path', { d: 'M 0 0 L 10 5 L 0 10 z', class: 'guide-arrow' }));
+   defs.appendChild(marker);
+   strokeGuide.appendChild(defs);
 
-        function draw(e) {
-            if (!isDrawing) return;
-            const pos = getMousePos(e);
-            ctx.lineTo(pos.x, pos.y);
-            ctx.stroke();
-            e.preventDefault();
-        }
+   guidePaths.forEach((stroke, index) => {
+     if (!Array.isArray(stroke) || stroke.length < 2) return;
+     const coords = stroke.map(point => `${(point[0] * cssWidth).toFixed(2)},${(point[1] * cssHeight).toFixed(2)}`).join(' ');
+     const line = createSvgElement('polyline', {
+       points: coords, class: 'guide-line', pathLength: 1,
+       'marker-end': 'url(#guideArrowHead)',
+       'aria-hidden': 'true'
+     });
+     line.style.animationDelay = `${index * 0.75}s`;
+     strokeGuide.appendChild(line);
 
-        function stopDrawing() {
-            isDrawing = false;
-        }
+     const first = stroke[0];
+     const x = first[0] * cssWidth;
+     const y = first[1] * cssHeight;
+     const pulse = createSvgElement('circle', {
+       cx: x, cy: y, r: 13, class: 'guide-start-pulse', fill: '#16a34a', 'aria-hidden': 'true'
+     });
+     const dot = createSvgElement('circle', {
+       cx: x, cy: y, r: 12, class: 'guide-start', 'aria-hidden': 'true'
+     });
+     const number = createSvgElement('text', {
+       x, y, class: 'guide-start-number', 'aria-hidden': 'true'
+     });
+     number.textContent = String(index + 1);
+     strokeGuide.append(pulse, dot, number);
+   });
 
-        // Eventos de Mouse
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseleave', stopDrawing);
+   if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+     strokeGuide.classList.remove('is-animating');
+     // Forzar recálculo para reiniciar la animación del recorrido.
+     void strokeGuide.getBoundingClientRect().width;
+     strokeGuide.classList.add('is-animating');
+   } else {
+     strokeGuide.classList.remove('is-animating');
+   }
+ }
 
-        // Eventos Táctiles (para pantallas táctiles o tabletas)
-        canvas.addEventListener('touchstart', startDrawing);
-        canvas.addEventListener('touchmove', draw);
-        canvas.addEventListener('touchend', stopDrawing);
+ function replayStrokeGuide() {
+   renderStrokeGuide(true);
+   const message = 'Observa. Empieza en el punto verde y sigue la línea hasta la flecha.';
+   if (window.AlfaMX) window.AlfaMX.speak(message);
+ }
+ replayGuideButton?.addEventListener('click', replayStrokeGuide);
 
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
+ // Se dibuja siempre en píxeles CSS y el canvas se escala por separado para
+ // pantallas HiDPI. Así, las coordenadas del puntero nunca dependen del zoom
+ // ni del tamaño físico interno del canvas.
+ function configureCanvas() {
+   const rect = canvas.getBoundingClientRect();
+   if (!rect.width || !rect.height) return;
 
-        function confirmStroke() {
-            alert('¡Excelente trazo! Actividad registrada correctamente.');
-            window.location.href = "{% url 'detalle_modulo' actividad.leccion.modulo.pk %}";
-        }
-    </script>
+   cssWidth = rect.width;
+   cssHeight = rect.height;
+   const dpr = Math.max(1, window.devicePixelRatio || 1);
+   const backingWidth = Math.max(1, Math.round(cssWidth * dpr));
+   const backingHeight = Math.max(1, Math.round(cssHeight * dpr));
 
-</body>
-</html>
+   if (canvas.width !== backingWidth || canvas.height !== backingHeight) {
+     canvas.width = backingWidth;
+     canvas.height = backingHeight;
+   }
+
+   // Usar la escala real después del redondeo evita desplazamientos de subpíxel.
+   const scaleX = canvas.width / cssWidth;
+   const scaleY = canvas.height / cssHeight;
+   ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+   ctx.lineWidth = Math.max(4, Math.min(9, Math.min(cssWidth, cssHeight) * 0.018));
+   ctx.lineCap = 'round';
+   ctx.lineJoin = 'round';
+   ctx.strokeStyle = '#514bc5';
+   ctx.fillStyle = '#514bc5';
+   renderStrokeGuide(false);
+   redrawAll();
+ }
+
+ // La fuente de verdad es points (coordenadas normalizadas 0..1), no una
+ // captura de pantalla. Cada resize vuelve a dibujar los trazos sin estirarlos.
+ function redrawAll() {
+   ctx.clearRect(0, 0, cssWidth, cssHeight);
+   let activeStroke = null;
+   let previous = null;
+   ctx.beginPath();
+
+   for (const point of points) {
+     const currentStroke = Number(point.stroke || 0);
+     const x = point.x * cssWidth;
+     const y = point.y * cssHeight;
+     if (activeStroke !== currentStroke || !previous) {
+       if (previous) ctx.stroke();
+       ctx.beginPath();
+       ctx.moveTo(x, y);
+       activeStroke = currentStroke;
+     } else {
+       ctx.lineTo(x, y);
+     }
+     previous = point;
+   }
+   if (previous) ctx.stroke();
+ }
+
+ // Mapea el puntero contra el rectángulo visible real del canvas, no contra
+ // el tamaño de su bitmap ni contra otro elemento superpuesto.
+ function pointerData(event) {
+   const rect = canvas.getBoundingClientRect();
+   const x = clamp((event.clientX - rect.left) / Math.max(1, rect.width));
+   const y = clamp((event.clientY - rect.top) / Math.max(1, rect.height));
+   return {
+     x,
+     y,
+     t: Math.max(0, Math.round(performance.now() - startedAt)),
+     stroke: strokeNumber,
+   };
+ }
+
+ function appendPoint(event) {
+   const point = pointerData(event);
+   const previous = lastPoint;
+   // Descarta únicamente muestras prácticamente idénticas (menos de medio
+   // píxel CSS). Evita acumular duplicados de los eventos coalescidos.
+   if (previous) {
+     const dx = (point.x - previous.x) * cssWidth;
+     const dy = (point.y - previous.y) * cssHeight;
+     if (Math.hypot(dx, dy) < 0.5) return;
+   }
+   points.push(point);
+   if (previous) {
+     ctx.beginPath();
+     ctx.moveTo(previous.x * cssWidth, previous.y * cssHeight);
+     ctx.lineTo(point.x * cssWidth, point.y * cssHeight);
+     ctx.stroke();
+   } else {
+     ctx.beginPath();
+     ctx.arc(point.x * cssWidth, point.y * cssHeight, ctx.lineWidth / 2, 0, Math.PI * 2);
+     ctx.fill();
+   }
+   lastPoint = point;
+   hasDrawn = true;
+ }
+
+ canvas.addEventListener('pointerdown', event => {
+   if (saving || (event.pointerType === 'mouse' && event.button !== 0)) return;
+   event.preventDefault();
+   drawing = true;
+   lastPoint = null;
+   try { canvas.setPointerCapture(event.pointerId); } catch (_) { /* Algunos navegadores no lo requieren. */ }
+   appendPoint(event);
+ });
+
+ canvas.addEventListener('pointermove', event => {
+   if (!drawing || saving) return;
+   event.preventDefault();
+   const samples = typeof event.getCoalescedEvents === 'function'
+     ? event.getCoalescedEvents()
+     : [];
+   if (samples && samples.length) {
+     for (const sample of samples) appendPoint(sample);
+   } else {
+     appendPoint(event);
+   }
+ });
+
+ function stopDrawing(event) {
+   if (!drawing) return;
+   if (event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+     appendPoint(event);
+   }
+   drawing = false;
+   lastPoint = null;
+   strokeNumber += 1;
+ }
+ canvas.addEventListener('pointerup', stopDrawing);
+ canvas.addEventListener('pointercancel', stopDrawing);
+ canvas.addEventListener('lostpointercapture', () => {
+   if (drawing) stopDrawing(null);
+ });
+
+ document.addEventListener('click', event => {
+   if (event.target.closest('[data-speak], [data-a11y-action="read-page"]')) audioUses += 1;
+ });
+
+ clearButton.addEventListener('click', () => {
+   if (saving) return;
+   points = [];
+   strokeNumber = 0;
+   drawing = false;
+   lastPoint = null;
+   hasDrawn = false;
+   savedThisDrawing = false;
+   startedAt = performance.now();
+   audioUses = 0;
+   redrawAll();
+   renderStrokeGuide(true);
+   confirmButton.disabled = false;
+   feedback.textContent = '';
+   feedback.classList.remove('is-error');
+ });
+
+ // El navegador puede entregar miles de muestras por un solo dibujo,
+ // especialmente con lápices digitales y pantallas de alta frecuencia.
+ // Simplificamos cada trazo antes de enviarlo, conservando su forma general.
+ const MAX_SUBMISSION_POINTS = 1800;
+
+ function distanceToSegmentPx(point, start, end) {
+   const px = point.x * cssWidth;
+   const py = point.y * cssHeight;
+   const ax = start.x * cssWidth;
+   const ay = start.y * cssHeight;
+   const bx = end.x * cssWidth;
+   const by = end.y * cssHeight;
+   const dx = bx - ax;
+   const dy = by - ay;
+   const lengthSquared = dx * dx + dy * dy;
+   if (!lengthSquared) return Math.hypot(px - ax, py - ay);
+   const ratio = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lengthSquared));
+   return Math.hypot(px - (ax + ratio * dx), py - (ay + ratio * dy));
+ }
+
+ function splitIntoStrokes(source) {
+   const groups = [];
+   for (const point of source) {
+     const strokeId = Number(point.stroke || 0);
+     let group = groups[groups.length - 1];
+     if (!group || group.strokeId !== strokeId) {
+       group = { strokeId, points: [] };
+       groups.push(group);
+     }
+     group.points.push(point);
+   }
+   return groups;
+ }
+
+ function simplifyStroke(source, tolerancePx) {
+   if (source.length <= 2) return source.slice();
+   const keep = new Uint8Array(source.length);
+   keep[0] = 1;
+   keep[source.length - 1] = 1;
+   const pending = [[0, source.length - 1]];
+
+   while (pending.length) {
+     const [first, last] = pending.pop();
+     let farthestIndex = -1;
+     let farthestDistance = tolerancePx;
+     for (let index = first + 1; index < last; index += 1) {
+       const distance = distanceToSegmentPx(source[index], source[first], source[last]);
+       if (distance > farthestDistance) {
+         farthestDistance = distance;
+         farthestIndex = index;
+       }
+     }
+     if (farthestIndex !== -1) {
+       keep[farthestIndex] = 1;
+       pending.push([first, farthestIndex], [farthestIndex, last]);
+     }
+   }
+   return source.filter((point, index) => keep[index]);
+ }
+
+ function evenlySampleStroke(source, desiredCount) {
+   if (source.length <= desiredCount) return source.slice();
+   const count = Math.max(2, desiredCount);
+   const sampled = [];
+   for (let index = 0; index < count; index += 1) {
+     const sourceIndex = Math.round(index * (source.length - 1) / (count - 1));
+     sampled.push(source[sourceIndex]);
+   }
+   return sampled;
+ }
+
+ function buildSubmissionPoints() {
+   const groups = splitIntoStrokes(points);
+   if (!groups.length) return [];
+
+   let tolerancePx = 0.65;
+   let simplifiedGroups = groups.map(group => group.points);
+   let total = points.length;
+   while (total > MAX_SUBMISSION_POINTS && tolerancePx <= 12) {
+     simplifiedGroups = groups.map(group => simplifyStroke(group.points, tolerancePx));
+     total = simplifiedGroups.reduce((sum, group) => sum + group.length, 0);
+     tolerancePx *= 1.6;
+   }
+   if (total <= MAX_SUBMISSION_POINTS) return simplifiedGroups.flat();
+
+   // Respaldo para dibujos muy largos: conserva el inicio y final de cada trazo.
+   if (groups.length * 2 > MAX_SUBMISSION_POINTS) return [];
+   const available = MAX_SUBMISSION_POINTS - groups.length * 2;
+   const weights = groups.map(group => Math.max(0, group.points.length - 2));
+   const weightTotal = weights.reduce((sum, value) => sum + value, 0) || 1;
+   const quotas = weights.map(weight => Math.floor(available * weight / weightTotal));
+   let remaining = available - quotas.reduce((sum, value) => sum + value, 0);
+   for (let index = 0; remaining > 0 && index < quotas.length; index = (index + 1) % quotas.length) {
+     if (quotas[index] < weights[index]) {
+       quotas[index] += 1;
+       remaining -= 1;
+     }
+   }
+   return groups.flatMap((group, index) =>
+     evenlySampleStroke(group.points, Math.min(group.points.length, quotas[index] + 2))
+   );
+ }
+
+ confirmButton.addEventListener('click', async () => {
+   feedback.classList.remove('is-error');
+   if (saving) return;
+   if (!hasDrawn || points.length < 2) {
+     feedback.textContent = 'Primero dibuja la letra o palabra siguiendo la guía.';
+     feedback.classList.add('is-error');
+     if (window.AlfaMX) window.AlfaMX.speak(feedback.textContent);
+     return;
+   }
+
+   const submissionPoints = buildSubmissionPoints();
+   if (submissionPoints.length < 2) {
+     feedback.textContent = 'Tu dibujo tiene demasiados trazos pequeños. Presiona Borrar e inténtalo de nuevo con movimientos continuos.';
+     feedback.classList.add('is-error');
+     if (window.AlfaMX) window.AlfaMX.speak(feedback.textContent);
+     return;
+   }
+
+   saving = true;
+   confirmButton.disabled = true;
+   feedback.textContent = 'Guardando tu práctica…';
+   try {
+     const response = await fetch(saveUrl, {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         'X-CSRFToken': csrfToken,
+         'X-Requested-With': 'XMLHttpRequest'
+       },
+       body: JSON.stringify({
+         coordenadas: submissionPoints,
+         tiempo_seg: Math.round((performance.now() - startedAt) / 1000),
+         usos_audio: audioUses,
+       }),
+     });
+     const result = await response.json();
+     if (!response.ok || !result.ok) throw new Error(result.mensaje || 'No se pudo guardar tu práctica.');
+     feedback.innerHTML = `${result.mensaje}<small>Precisión orientativa: ${result.puntaje}% · Intento guardado. Presiona Borrar dibujo para practicar otra vez.</small>`;
+     savedThisDrawing = true;
+     if (window.AlfaMX) window.AlfaMX.speak(`${result.mensaje} Tu precisión orientativa fue de ${result.puntaje} por ciento. Tu práctica quedó guardada.`);
+   } catch (error) {
+     feedback.textContent = error.message || 'Ocurrió un problema al guardar. Comprueba tu conexión y vuelve a intentar.';
+     feedback.classList.add('is-error');
+     if (window.AlfaMX) window.AlfaMX.speak(feedback.textContent);
+   } finally {
+     saving = false;
+     confirmButton.disabled = savedThisDrawing;
+   }
+ });
+
+ function scheduleResize() {
+   if (resizePending) return;
+   resizePending = true;
+   window.requestAnimationFrame(() => {
+     resizePending = false;
+     fitGuide();
+     configureCanvas();
+   });
+ }
+
+ // ResizeObserver detecta cambios de tamaño causados por zoom, orientación,
+ // paneles y ajustes responsivos, incluso cuando no cambia el viewport.
+ if ('ResizeObserver' in window) {
+   const observer = new ResizeObserver(scheduleResize);
+   observer.observe(container);
+ }
+ window.addEventListener('resize', scheduleResize, { passive: true });
+ window.addEventListener('orientationchange', scheduleResize, { passive: true });
+ fitGuide();
+ configureCanvas();
+ renderStrokeGuide(true);
+})();
+</script>{% endblock %}

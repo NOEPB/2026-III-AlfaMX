@@ -1,0 +1,33 @@
+{% extends 'academia/base.html' %}
+{% block title %}Mi progreso | AlfabetizaMX{% endblock %}
+{% block extra_head %}<style>
+.progress-hero{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:28px 32px;margin:10px 0 24px;border-radius:24px;background:linear-gradient(125deg,#253b83,#514bc5);color:#fff}.progress-hero h1{margin:5px 0 8px;font-size:clamp(26px,4vw,36px)}.progress-hero p{margin:0;color:#e7e9ff;line-height:1.6}.progress-ring{width:130px;height:130px;flex:0 0 130px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#facc15 calc(var(--progress)*1%),rgba(255,255,255,.22) 0);position:relative}.progress-ring:before{content:"";position:absolute;inset:12px;background:#34478f;border-radius:50%}.progress-ring strong{position:relative;font-size:30px}.progress-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:26px}.progress-stat{padding:18px;border:1px solid var(--border,#e5eaf2);border-radius:17px;background:var(--surface,#fff)}.progress-stat strong{display:block;font-size:28px;color:#312e81}.progress-stat span{color:var(--muted,#64748b);font-size:13px}.module-progress-list{display:grid;gap:15px}.module-progress-card{padding:20px;border:1px solid var(--border,#e5eaf2);border-radius:18px;background:var(--surface,#fff)}.module-progress-head{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-bottom:12px}.module-progress-head h3{margin:0 0 4px}.module-progress-head p{margin:0;color:var(--muted,#64748b);font-size:13px}.progress-bar{height:13px;border-radius:20px;background:#e9edf5;overflow:hidden}.progress-bar span{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,#4f46e5,#0d9488)}.lesson-progress-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-top:14px}.lesson-progress{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;background:var(--surface-soft,#f8fafc);font-size:13px}.lesson-progress.done{background:#ecfdf5;color:#166534}.attempt-table{width:100%;border-collapse:collapse}.attempt-table th,.attempt-table td{text-align:left;padding:12px;border-bottom:1px solid var(--border,#e5eaf2);font-size:14px}.attempt-table th{color:var(--muted,#64748b)}.score-pill{display:inline-block;padding:5px 9px;border-radius:20px;background:#eef2ff;color:#3730a3;font-weight:800}.progress-empty{padding:24px;text-align:center;color:var(--muted,#64748b)}@media(max-width:760px){.progress-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.progress-hero{padding:22px;align-items:flex-start}.progress-ring{width:92px;height:92px;flex-basis:92px}.progress-ring:before{inset:9px}.progress-ring strong{font-size:23px}}@media(max-width:480px){.progress-ring{display:none}.progress-hero{padding:18px}.attempt-table th:nth-child(3),.attempt-table td:nth-child(3){display:none}}
+</style>{% endblock %}
+{% block content %}
+<section class="section-heading page-heading"><div><span class="eyebrow">SEGUIMIENTO DEL APRENDIZAJE</span><h1>{% if es_otro_usuario %}Progreso de {{ alumno.get_full_name|default:alumno.username }}{% else %}Mi progreso{% endif %}</h1><p>Este resumen muestra tus prácticas guardadas. La precisión es una orientación para seguir aprendiendo.</p></div><a class="button button-secondary" href="{% if es_otro_usuario %}{% url 'lista_alumnos' %}{% else %}{% url 'home' %}{% endif %}">← Volver</a></section>
+<section class="progress-hero" data-read-section>
+    <div><span class="eyebrow">TU CAMINO DE APRENDIZAJE</span><h1>{{ lecciones_completadas }} de {{ total_lecciones }} lecciones completas</h1><p>Una lección se marca como completa cuando consigues al menos 65% en todas sus actividades.</p></div>
+    <div class="progress-ring" style="--progress:{{ porcentaje_general }}"><strong>{{ porcentaje_general }}%</strong></div>
+</section>
+<div class="progress-stats">
+    <article class="progress-stat"><strong>{{ total_intentos }}</strong><span>Prácticas realizadas</span></article>
+    <article class="progress-stat"><strong>{{ promedio }}%</strong><span>Precisión orientativa promedio</span></article>
+    <article class="progress-stat"><strong>{{ minutos_practicados }}</strong><span>Minutos de práctica</span></article>
+    <article class="progress-stat"><strong>{{ actividades_completadas }}/{{ total_actividades }}</strong><span>Actividades superadas</span></article>
+</div>
+<section class="section-heading compact"><div><h2>Avance por apartado</h2><p>Escoge un apartado para seguir practicando.</p></div></section>
+<div class="module-progress-list">
+{% for item in modulos_progreso %}
+    <article class="module-progress-card">
+        <div class="module-progress-head"><div><h3>{{ item.modulo.icono_visual }} {{ item.modulo.nombre }}</h3><p>{{ item.lecciones_completadas }} de {{ item.total_lecciones }} lecciones completas</p></div><strong>{{ item.porcentaje }}%</strong></div>
+        <div class="progress-bar" role="progressbar" aria-label="Avance de {{ item.modulo.nombre }}" aria-valuenow="{{ item.porcentaje }}" aria-valuemin="0" aria-valuemax="100"><span style="width:{{ item.porcentaje }}%"></span></div>
+        <div class="lesson-progress-grid">{% for lesson in item.lecciones %}<div class="lesson-progress {% if lesson.completada %}done{% endif %}"><span aria-hidden="true">{% if lesson.completada %}✓{% else %}○{% endif %}</span><span>{{ lesson.leccion.titulo }}</span></div>{% empty %}<p class="progress-empty">Todavía no hay lecciones en este apartado.</p>{% endfor %}</div>
+        <p style="margin:14px 0 0"><a class="text-link" href="{% url 'detalle_modulo' item.modulo.pk %}">Practicar este apartado →</a></p>
+    </article>
+{% endfor %}
+</div>
+<section class="table-panel" style="margin-top:28px"><div class="table-panel-head"><div><h2>Prácticas recientes</h2><p>Los últimos ejercicios guardados.</p></div></div>
+<div class="table-scroll"><table class="attempt-table"><thead><tr><th>Actividad</th><th>Apartado</th><th>Precisión</th><th>Fecha</th></tr></thead><tbody>
+{% for intento in ultimos_intentos %}<tr><td>{{ intento.actividad.leccion.titulo }}</td><td>{{ intento.actividad.leccion.modulo.nombre }}</td><td><span class="score-pill">{{ intento.puntaje }}%</span></td><td>{{ intento.fecha_hora|date:'d/m/Y H:i' }}</td></tr>{% empty %}<tr><td colspan="4" class="progress-empty">Aún no hay prácticas guardadas. Elige un módulo para comenzar.</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

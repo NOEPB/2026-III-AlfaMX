@@ -1,0 +1,13 @@
+{% extends 'academia/base.html' %}
+{% block title %}Alumnos | AlfabetizaMX{% endblock %}
+{% block content %}
+<section class="section-heading page-heading"><div><span class="eyebrow">SEGUIMIENTO EDUCATIVO</span><h1>{% if es_admin %}Alumnos registrados{% else %}Mis estudiantes{% endif %}</h1><p>{% if es_admin %}Consulta las cuentas que tienen el rol de estudiante y su clasificación por edad.{% else %}Solo aparecen los estudiantes con un vínculo activo contigo.{% endif %}</p></div></section>
+<section class="table-panel"><div class="table-panel-head"><div><h2>Estudiantes con cuenta</h2><p>Los nuevos alumnos se registran como usuarios de la plataforma.</p></div><form class="search-form" method="get"><input type="search" name="q" value="{{ busqueda }}" placeholder="Buscar alumno"><button class="button button-secondary" type="submit">Buscar</button></form></div>
+<div class="table-scroll"><table class="data-table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Correo</th><th>Edad</th><th>Clasificación</th><th>Fecha de registro</th><th>Seguimiento</th></tr></thead><tbody>
+{% for perfil in perfiles %}<tr><td><strong>{{ perfil.user.get_full_name|default:perfil.user.username }}</strong></td><td>@{{ perfil.user.username }}</td><td>{{ perfil.user.email|default:'Sin correo' }}</td><td>{% if perfil.edad != None %}{{ perfil.edad }} años{% else %}Sin dato{% endif %}</td><td><span class="role-pill {% if perfil.edad != None and perfil.edad >= 18 %}role-adult{% else %}role-estudiante{% endif %}">{{ perfil.categoria_edad }}</span></td><td>{{ perfil.fecha_registro|date:'d/m/Y' }}</td><td><a href="{% url 'progreso_usuario' perfil.user.pk %}">Ver progreso</a></td></tr>
+{% empty %}<tr><td colspan="7" class="table-empty">No hay estudiantes que coincidan con la búsqueda.</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% if es_admin %}
+<section class="table-panel legacy-panel"><div class="table-panel-head"><div><h2>Registros anteriores (sin cuenta)</h2><p>Son registros que existían antes de integrar alumnos y usuarios. Se conservan para no perder información.</p></div><span class="status-muted">{{ registros_anteriores|length }} registros</span></div><div class="table-scroll"><table class="data-table"><thead><tr><th>Nombre guardado</th><th>Edad registrada</th><th>Clasificación</th><th>Fecha de registro</th></tr></thead><tbody>{% for alumno in registros_anteriores %}<tr><td>{{ alumno.nombre }}</td><td>{{ alumno.edad }} años</td><td><span class="role-pill">{{ alumno.categoria_edad }}</span></td><td>{{ alumno.fecha_registro|date:'d/m/Y' }}</td></tr>{% empty %}<tr><td colspan="4" class="table-empty">No hay registros anteriores.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endif %}
+{% endblock %}
